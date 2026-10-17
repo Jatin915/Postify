@@ -1,6 +1,22 @@
 const cloudinary = require("../config/cloudinary");
 const postModel = require("../models/Post");
 
+const streamifier = require("streamifier");
+
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { resource_type: "image" },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+};
+
 const uploadImage = async (req, res) => {
   try {
     if (!req.file) {
@@ -11,7 +27,7 @@ const uploadImage = async (req, res) => {
 
     const caption = req.body.caption?.trim();
     const userId = req.user._id;
-    const result = await cloudinary.uploader.upload(req.file.path);
+    const result = await uploadToCloudinary(req.file.buffer);
     const imageUrl = result.secure_url;
     const publicId = result.public_id;
 
